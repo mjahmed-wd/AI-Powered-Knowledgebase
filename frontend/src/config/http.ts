@@ -1,7 +1,36 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { API_ENDPOINTS, APIResponse, APIError } from '@/config/apiEndpoints';
+import store from '@/store';
+
+// Function to get auth token - will be used by interceptor
+let getTokenFunction: (() => string | null) = () => {
+    const state = store.getState();
+    if (state.auth.isAuthenticated && state.auth.user) {
+        return state.auth.token || null;
+    }
+    return null;
+};
+
+// Function to handle unauthorized requests - will be set by the auth system
+let handleUnauthorizedFunction: (() => void) | null = null;
+
+// Allow setting the token getter function from outside
+export const setTokenGetter = (tokenGetter: () => string | null) => {
+  getTokenFunction = tokenGetter;
+};
+
+// Allow setting the unauthorized handler from outside
+export const setUnauthorizedHandler = (handler: () => void) => {
+  handleUnauthorizedFunction = handler;
+};
 
 const getAuthToken = (): string | null => {
+  // First try the external function (from Redux)
+  if (getTokenFunction) {
+    return getTokenFunction();
+  }
+  
+  // Fallback to localStorage
   if (typeof window !== 'undefined') {
     return localStorage.getItem('authToken');
   }
@@ -9,9 +38,18 @@ const getAuthToken = (): string | null => {
 };
 
 const handleUnauthorized = (): void => {
+  // Use external handler if available
+  if (handleUnauthorizedFunction) {
+    handleUnauthorizedFunction();
+    return;
+  }
+
+  // Fallback to localStorage cleanup
   if (typeof window !== 'undefined') {
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
+    // Redirect to login
+    window.location.href = '/login';
   }
 };
 
@@ -20,7 +58,7 @@ const setupInterceptors = (instance: AxiosInstance): void => {
     (config: InternalAxiosRequestConfig) => {
       const token = getAuthToken();
       if (token && config.headers) {
-        config.headers.authorization = `Bearer ${token}`;
+        config.headers.Authorization = `${token}`;
       }
       return config;
     },

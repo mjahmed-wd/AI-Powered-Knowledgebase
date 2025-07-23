@@ -1,17 +1,31 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Button, Input } from '@/components/ui';
+import { useRouter } from 'next/navigation';
+import { Button, Input, TagSelector } from '@/components/ui';
+import { createArticle } from '@/services/articleService';
+import { Tag } from '@/types/api';
+import { useAuth } from '@/hooks/useAuth';
+import { notify } from '@/utils/notify';
 
 export default function CreateArticle() {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
-    body: '',
-    tags: ''
+    content: ''
   });
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -28,6 +42,17 @@ export default function CreateArticle() {
     }
   };
 
+  const handleTagsChange = (tags: Tag[]) => {
+    setSelectedTags(tags);
+    // Clear tags error if any
+    if (errors.tags) {
+      setErrors(prev => ({
+        ...prev,
+        tags: ''
+      }));
+    }
+  };
+
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
 
@@ -37,10 +62,14 @@ export default function CreateArticle() {
       newErrors.title = 'Title must be at least 10 characters';
     }
 
-    if (!formData.body.trim()) {
-      newErrors.body = 'Article content is required';
-    } else if (formData.body.trim().length < 100) {
-      newErrors.body = 'Article content must be at least 100 characters';
+    if (!formData.content.trim()) {
+      newErrors.content = 'Article content is required';
+    } else if (formData.content.trim().length < 100) {
+      newErrors.content = 'Article content must be at least 100 characters';
+    }
+
+    if (selectedTags.length === 0) {
+      newErrors.tags = 'Please select at least one tag';
     }
 
     setErrors(newErrors);
@@ -57,38 +86,36 @@ export default function CreateArticle() {
     setIsLoading(true);
     
     try {
-      // Process tags
-      const tagsArray = formData.tags
-        .split(',')
-        .map(tag => tag.trim())
-        .filter(tag => tag.length > 0);
-
       const articleData = {
         title: formData.title.trim(),
-        body: formData.body.trim(),
-        tags: tagsArray
+        content: formData.content.trim(),
+        tagIds: selectedTags.map(tag => tag.id)
       };
 
-      // TODO: Implement actual API call to create article
-      console.log('Creating article:', articleData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Redirect to dashboard on success
-      window.location.href = '/dashboard';
+      await createArticle(articleData);
+      notify.success('Article published successfully!');
+      router.push('/dashboard');
     } catch (error) {
       console.error('Create article error:', error);
       setErrors({ submit: 'An error occurred while creating the article. Please try again.' });
+      notify.error('Failed to publish article. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const processedTags = formData.tags
-    .split(',')
-    .map(tag => tag.trim())
-    .filter(tag => tag.length > 0);
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Please log in to create an article</h2>
+          <Link href="/login">
+            <Button>Log In</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -139,19 +166,19 @@ export default function CreateArticle() {
                 Article Content
               </label>
               <textarea
-                name="body"
-                value={formData.body}
+                name="content"
+                value={formData.content}
                 onChange={handleChange}
                 rows={20}
                 className={`
                   block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 
                   focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                  ${errors.body ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
+                  ${errors.content ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
                 `}
                 placeholder="Write your article content here... You can use Markdown syntax for formatting."
               />
-              {errors.body && (
-                <p className="mt-1 text-sm text-red-600">{errors.body}</p>
+              {errors.content && (
+                <p className="mt-1 text-sm text-red-600">{errors.content}</p>
               )}
               <p className="mt-1 text-xs text-gray-500">
                 Use Markdown for formatting. Supports headings (## Heading), code blocks (```), and more.
@@ -159,29 +186,36 @@ export default function CreateArticle() {
             </div>
 
             <div>
-              <Input
-                label="Tags"
-                type="text"
-                name="tags"
-                value={formData.tags}
-                onChange={handleChange}
-                placeholder="Enter tags separated by commas (e.g., React, JavaScript, Web Development)"
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tags
+              </label>
+              <TagSelector
+                selectedTags={selectedTags}
+                onTagsChange={handleTagsChange}
+                placeholder="Search or create tags for your article..."
+                className="mt-1"
               />
+              {errors.tags && (
+                <p className="mt-1 text-sm text-red-600">{errors.tags}</p>
+              )}
               <p className="mt-1 text-xs text-gray-500">
-                Add relevant tags to help others discover your article
+                Add relevant tags to help others discover your article. You can select existing tags or create new ones.
               </p>
               
               {/* Tag Preview */}
-              {processedTags.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {processedTags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
+              {selectedTags.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-xs font-medium text-gray-700 mb-2">Selected tags:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTags.map((tag) => (
+                      <span
+                        key={tag.id}
+                        className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full"
+                      >
+                        {tag.name}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -214,9 +248,10 @@ export default function CreateArticle() {
                 variant="outline"
                 onClick={() => {
                   if (confirm('Are you sure you want to discard this article?')) {
-                    window.location.href = '/dashboard';
+                    router.push('/dashboard');
                   }
                 }}
+                disabled={isLoading}
               >
                 Cancel
               </Button>

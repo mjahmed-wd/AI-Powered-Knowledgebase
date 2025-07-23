@@ -1,54 +1,103 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArticleList, Article } from '@/components/articles';
 import { Button } from '@/components/ui';
+import { getMyArticles, deleteArticle, summarizeArticle } from '@/services/articleService';
+import { Article as APIArticle } from '@/types/api';
+import { useAuth } from '@/hooks/useAuth';
+import { notify } from '@/utils/notify';
 
-// Mock data for user's articles
-const mockUserArticles: Article[] = [
-  {
-    id: '1',
-    title: 'My First Article on React Hooks',
-    body: 'This is my comprehensive guide on React Hooks. I cover useState, useEffect, and custom hooks with practical examples.',
-    author: {
-      id: 'current-user',
-      name: 'You'
-    },
-    tags: ['React', 'JavaScript', 'Frontend'],
-    createdAt: '2024-01-15T10:00:00Z',
-    updatedAt: '2024-01-15T10:00:00Z'
+// Helper function to convert API Article to Component Article
+const convertAPIArticleToComponentArticle = (apiArticle: APIArticle): Article => ({
+  id: apiArticle.id,
+  title: apiArticle.title,
+  body: apiArticle.content,
+  author: {
+    id: apiArticle.authorId,
+    name: apiArticle.author?.name || 'Unknown Author'
   },
-  {
-    id: '3',
-    title: 'Building APIs with Node.js',
-    body: 'In this article, I share my experience building scalable APIs with Node.js and Express.',
-    author: {
-      id: 'current-user',
-      name: 'You'
-    },
-    tags: ['Node.js', 'API', 'Backend'],
-    createdAt: '2024-01-13T09:15:00Z',
-    updatedAt: '2024-01-13T09:15:00Z'
-  }
-];
+  tags: apiArticle.tags?.map(tag => tag.name) || [],
+  createdAt: apiArticle.createdAt,
+  updatedAt: apiArticle.updatedAt
+});
 
 export default function Dashboard() {
-  const [articles, setArticles] = useState<Article[]>(mockUserArticles);
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isSummarizing, setIsSummarizing] = useState<string | null>(null);
+  const { isAuthenticated } = useAuth();
 
-  const handleDeleteArticle = (id: string) => {
-    if (confirm('Are you sure you want to delete this article?')) {
-      setArticles(articles.filter(article => article.id !== id));
-      // TODO: Call API to delete article
-      console.log('Deleting article:', id);
+  // Load user's articles on component mount
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadMyArticles();
+    }
+  }, [isAuthenticated]);
+
+  const loadMyArticles = async () => {
+    try {
+      setIsLoading(true);
+      const userArticles = await getMyArticles();
+      const convertedArticles = userArticles.map(convertAPIArticleToComponentArticle);
+      setArticles(convertedArticles);
+    } catch (error) {
+      console.error('Failed to load articles:', error);
+      notify.error('Failed to load your articles. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSummarizeArticle = (id: string) => {
-    // TODO: Implement summarization
-    console.log('Summarizing article:', id);
-    alert('Summarization feature will be implemented when connected to the API.');
+  const handleDeleteArticle = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this article? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setIsDeleting(id);
+      await deleteArticle(id);
+      setArticles(articles.filter(article => article.id !== id));
+      notify.success('Article deleted successfully');
+    } catch (error) {
+      console.error('Delete article error:', error);
+      notify.error('Failed to delete article. Please try again.');
+    } finally {
+      setIsDeleting(null);
+    }
   };
+
+  const handleSummarizeArticle = async (id: string) => {
+    try {
+      setIsSummarizing(id);
+      const summary = await summarizeArticle(id);
+      
+      // Show summary in a modal or alert for now
+      alert(`Article Summary:\n\n${summary.summary}`);
+      notify.success('Article summarized successfully');
+    } catch (error) {
+      console.error('Summarize article error:', error);
+      notify.error('Failed to summarize article. Please try again.');
+    } finally {
+      setIsSummarizing(null);
+    }
+  };
+
+  // Show loading state
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Please log in to access your dashboard</h2>
+          <Link href="/login">
+            <Button>Log In</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -82,13 +131,27 @@ export default function Dashboard() {
             <p className="mt-1 text-gray-600">Articles you&apos;ve published on the platform</p>
           </div>
           <div className="p-6">
-            <ArticleList
-              articles={articles}
-              showActions={true}
-              onDelete={handleDeleteArticle}
-              onSummarize={handleSummarizeArticle}
-              emptyMessage="You haven&apos;t published any articles yet. Start writing your first article!"
-            />
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="flex items-center space-x-2">
+                  <svg className="animate-spin h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span className="text-gray-600">Loading your articles...</span>
+                </div>
+              </div>
+            ) : (
+              <ArticleList
+                articles={articles}
+                showActions={true}
+                onDelete={handleDeleteArticle}
+                onSummarize={handleSummarizeArticle}
+                emptyMessage="You haven&apos;t published any articles yet. Start writing your first article!"
+                isDeleting={isDeleting}
+                isSummarizing={isSummarizing}
+              />
+            )}
           </div>
         </div>
 

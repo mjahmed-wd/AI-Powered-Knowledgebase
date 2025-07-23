@@ -3,9 +3,9 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'USER' | 'ADMIN';
-  createdAt: string;
-  updatedAt: string;
+  role: 'user' | 'admin';
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreateUserRequest {
@@ -25,9 +25,17 @@ export interface SignInRequest {
   password: string;
 }
 
+export interface SignInResponse {
+  statusCode: number;
+  success: boolean;
+  message: string;
+  data: User;
+  token: string;
+}
+
 export interface AuthResponse {
   user: User;
-  accessToken: string;
+  token: string;
 }
 
 export interface Article {

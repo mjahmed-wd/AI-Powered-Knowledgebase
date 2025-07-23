@@ -7,6 +7,8 @@ interface ArticleListProps {
   onDelete?: (id: string) => void;
   onSummarize?: (id: string) => void;
   emptyMessage?: string;
+  isDeleting?: string | null;
+  isSummarizing?: string | null;
 }
 
 export const ArticleList: React.FC<ArticleListProps> = ({
@@ -14,7 +16,9 @@ export const ArticleList: React.FC<ArticleListProps> = ({
   showActions = false,
   onDelete,
   onSummarize,
-  emptyMessage = "No articles found."
+  emptyMessage = "No articles found.",
+  isDeleting,
+  isSummarizing
 }) => {
   if (articles.length === 0) {
     return (
@@ -39,6 +43,8 @@ export const ArticleList: React.FC<ArticleListProps> = ({
           showActions={showActions}
           onDelete={onDelete}
           onSummarize={onSummarize}
+          isDeleting={isDeleting === article.id}
+          isSummarizing={isSummarizing === article.id}
         />
       ))}
     </div>

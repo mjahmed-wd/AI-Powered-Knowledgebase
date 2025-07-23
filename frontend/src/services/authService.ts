@@ -1,12 +1,13 @@
-import httpClient from '@/config/http';
-import { API_ENDPOINTS } from '@/config/apiEndpoints';
+import httpClient from "@/config/http";
+import { API_ENDPOINTS } from "@/config/apiEndpoints";
 import {
   SignInRequest,
   CreateUserRequest,
   UpdateUserRequest,
+  SignInResponse,
   AuthResponse,
   User,
-} from '@/types/api';
+} from "@/types/api";
 
 export const signUp = async (userData: CreateUserRequest): Promise<User> => {
   const response = await httpClient.post<User>(
@@ -16,18 +17,21 @@ export const signUp = async (userData: CreateUserRequest): Promise<User> => {
   return response.data!;
 };
 
-export const signIn = async (credentials: SignInRequest): Promise<AuthResponse> => {
-  const response = await httpClient.post<AuthResponse>(
+export const signIn = async (
+  credentials: SignInRequest
+): Promise<AuthResponse> => {
+  const response = await httpClient.post(
     API_ENDPOINTS.AUTH.SIGNIN,
     credentials
-  );
-  
-  if (response.data?.accessToken) {
-    httpClient.setAuthToken(response.data.accessToken);
-    storeUser(response.data.user);
+  ) as unknown as SignInResponse;
+
+  if (response.token && response.data) {
+    httpClient.setAuthToken(response.token);
+    storeUser(response.data);
   }
   
-  return response.data!;
+  const returnData = { user: response.data, token: response.token };
+  return returnData;
 };
 
 export const getUserProfile = async (userId: string): Promise<User> => {
@@ -57,29 +61,29 @@ export const signOut = (): void => {
 };
 
 export const isAuthenticated = (): boolean => {
-  if (typeof window !== 'undefined') {
-    return !!localStorage.getItem('authToken');
+  if (typeof window !== "undefined") {
+    return !!localStorage.getItem("authToken");
   }
   return false;
 };
 
 export const getAuthToken = (): string | null => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('authToken');
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("authToken");
   }
   return null;
 };
 
 export const getStoredUser = (): User | null => {
-  if (typeof window !== 'undefined') {
-    const userData = localStorage.getItem('user');
+  if (typeof window !== "undefined") {
+    const userData = localStorage.getItem("user");
     return userData ? JSON.parse(userData) : null;
   }
   return null;
 };
 
 export const storeUser = (user: User): void => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('user', JSON.stringify(user));
+  if (typeof window !== "undefined") {
+    localStorage.setItem("user", JSON.stringify(user));
   }
 };
