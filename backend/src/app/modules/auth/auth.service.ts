@@ -4,7 +4,7 @@ import httpStatus from 'http-status';
 import ApiError from '../../../errors/ApiError';
 import prisma from '../../../shared/prisma';
 import { IAuthRequest } from './auth.interface';
-import { UserWithoutPassword, userSelectWithoutPassword } from '../../../interfaces/common';
+import { userSelectWithoutPassword, UserWithoutPassword } from '../user/user.constants';
 
 const signIn = async (data: IAuthRequest): Promise<UserWithoutPassword> => {
   const isUserExist = await prisma.user.findUnique({
