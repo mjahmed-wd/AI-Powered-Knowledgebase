@@ -24,6 +24,7 @@ export const signIn = async (credentials: SignInRequest): Promise<AuthResponse> 
   
   if (response.data?.accessToken) {
     httpClient.setAuthToken(response.data.accessToken);
+    storeUser(response.data.user);
   }
   
   return response.data!;

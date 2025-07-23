@@ -1,7 +1,7 @@
 import * as authService from '@/services/authService';
 import { CreateUserRequest, SignInRequest } from '@/types/api';
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { authFailure, authStart, authSuccess, clearAuth, updateUser } from './authSlice';
+import { authFailure, authStart, authSuccess, clearAuth, updateUser, setLoading, clearError } from './authSlice';
 
 interface ErrorResponse {
   message?: string;
@@ -13,6 +13,10 @@ export const signUpUser = createAsyncThunk(
     try {
       dispatch(authStart());
       const user = await authService.signUp(userData);
+      
+      dispatch(setLoading(false));
+      dispatch(clearError());
+      
       return user;
     } catch (error: unknown) {
       const message = (error as ErrorResponse)?.message || 'Sign up failed';
@@ -28,8 +32,6 @@ export const signInUser = createAsyncThunk(
     try {
       dispatch(authStart());
       const authResponse = await authService.signIn(credentials);
-      
-      authService.storeUser(authResponse.user);
       
       dispatch(authSuccess({
         user: authResponse.user,
@@ -63,8 +65,6 @@ export const getUserProfile = createAsyncThunk(
   async (userId: string, { dispatch, rejectWithValue }) => {
     try {
       const user = await authService.getUserProfile(userId);
-      
-      authService.storeUser(user);
       
       dispatch(updateUser(user));
       return user;
