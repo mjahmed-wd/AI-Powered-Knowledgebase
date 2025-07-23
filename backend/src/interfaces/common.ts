@@ -15,17 +15,3 @@ export type IGenericErrorResponse = {
   message: string;
   errorMessages: IGenericErrorMessage[];
 };
-
-// User type without password for API responses
-export type UserWithoutPassword = Omit<User, 'password'>;
-
-// User select object to exclude password from Prisma queries
-export const userSelectWithoutPassword = {
-  id: true,
-  name: true,
-  email: true,
-  role: true,
-  password: false,
-  createdAt: false,
-  updatedAt: false,
-};

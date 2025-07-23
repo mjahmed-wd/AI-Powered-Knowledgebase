@@ -6,13 +6,15 @@ import {
   userRelationalFields,
   userRelationalFieldsMapper,
   userSearchableFields,
+  userSelectWithoutPassword,
+  UserWithoutPassword,
 } from './user.constants';
 import { IUserFilterRequest } from './user.interface';
 import config from '../../../config';
 import prisma from '../../../shared/prisma';
 import ApiError from '../../../errors/ApiError';
 import { ENUM_USER_ROLE } from '../../../enums/user';
-import { IGenericResponse, UserWithoutPassword, userSelectWithoutPassword } from '../../../interfaces/common';
+import { IGenericResponse } from '../../../interfaces/common';
 import { IPaginationOptions } from '../../../interfaces/pagination';
 import { paginationHelpers } from '../../../helpers/paginationHelper';
 
