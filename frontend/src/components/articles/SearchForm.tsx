@@ -24,17 +24,20 @@ export const SearchForm: React.FC<SearchFormProps> = ({
 }) => {
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [tagLoadError, setTagLoadError] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoadingData(true);
+        setTagLoadError(null);
         const tagsResponse = await getAllTagsSimple();
-
         setTags(tagsResponse);
       } catch (error) {
-        console.error("Error loading search form data:", error);
+        console.error("Error loading tags:", error);
+        setTagLoadError("Failed to load tags. Search will work without tag filtering.");
+        setTags([]);
       } finally {
         setIsLoadingData(false);
       }
@@ -134,24 +137,39 @@ export const SearchForm: React.FC<SearchFormProps> = ({
                     )}
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setShowFilters(!showFilters)}
-                    className={`p-3 ml-1 rounded-lg transition-colors ${
-                      showFilters 
-                        ? 'bg-blue-100 text-blue-600' 
-                        : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
-                    }`}
-                    title="Toggle filters"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z" />
-                    </svg>
-                  </button>
+                  {/* Only show filter button if we have tags or if there's no error */}
+                  {!tagLoadError && (
+                    <button
+                      type="button"
+                      onClick={() => setShowFilters(!showFilters)}
+                      className={`p-3 ml-1 rounded-lg transition-colors ${
+                        showFilters 
+                          ? 'bg-blue-100 text-blue-600' 
+                          : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                      }`}
+                      title="Toggle filters"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {showFilters && (
+              {/* Show tag load error if any */}
+              {tagLoadError && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <span className="text-sm text-yellow-800">{tagLoadError}</span>
+                  </div>
+                </div>
+              )}
+
+              {showFilters && !tagLoadError && (
                 <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-100 animate-fade-in">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold text-gray-700 flex items-center">

@@ -10,7 +10,7 @@ const router = express.Router();
 
 router
   .route('/')
-  .get(auth(ENUM_USER_ROLE.USER), TagController.getAllFromDB)
+  .get(TagController.getAllFromDB)
   .post(
     auth(ENUM_USER_ROLE.USER),
     validateRequest(TagValidation.create),
@@ -19,7 +19,7 @@ router
 
 router
   .route('/:id')
-  .get(auth(ENUM_USER_ROLE.USER), TagController.getByIdFromDB)
+  .get(TagController.getByIdFromDB)
   .patch(
     auth(ENUM_USER_ROLE.USER),
     validateRequest(TagValidation.update),

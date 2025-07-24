@@ -23,7 +23,6 @@ router
 router
   .route('/search')
   .post(
-    auth(ENUM_USER_ROLE.USER),
     validateRequest(ArticleValidation.advancedSearch),
     ArticleController.getAllFromDB
   );
@@ -34,7 +33,7 @@ router
 
 router
   .route('/:id')
-  .get(auth(ENUM_USER_ROLE.USER), ArticleController.getByIdFromDB)
+  .get(ArticleController.getByIdFromDB)
   .patch(
     auth(ENUM_USER_ROLE.USER),
     validateRequest(ArticleValidation.update),
