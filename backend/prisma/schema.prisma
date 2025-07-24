@@ -5,41 +5,42 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id        String    @id @default(uuid())
-  name      String    // User's full name
-  email     String    @unique
-  password  String    // Store hashed passwords
-  role      String    @default("user")
-  articles  Article[] // A user can have multiple articles
+  id       String    @id @default(uuid())
+  name     String // User's full name
+  email    String    @unique
+  password String // Store hashed passwords
+  role     String    @default("user")
+  articles Article[] // A user can have multiple articles
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Article {
-  id        String    @id @default(uuid())
-  title     String
-  body      String
-  authorId  String
-  author    User      @relation(fields: [authorId], references: [id])
-  tags      Tag[]     @relation("ArticleToTag") // Many-to-many relationship with Tag
+  id       String @id @default(uuid())
+  title    String
+  body     String
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+  tags     Tag[]  @relation("ArticleToTag") // Many-to-many relationship with Tag
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([authorId]) // Add an index for faster lookups by author
 }
 
 model Tag {
-  id        String    @id @default(uuid())
-  name      String    @unique // Ensure tag names are unique
-  articles  Article[] @relation("ArticleToTag") // Many-to-many relationship with Article
+  id       String    @id @default(uuid())
+  name     String    @unique // Ensure tag names are unique
+  articles Article[] @relation("ArticleToTag") // Many-to-many relationship with Article
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
