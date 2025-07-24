@@ -51,13 +51,13 @@ export interface Article {
 
 export interface CreateArticleRequest {
   title: string;
-  content: string;
+  body: string;
   tagIds?: string[];
 }
 
 export interface UpdateArticleRequest {
   title?: string;
-  content?: string;
+  body?: string;
   tagIds?: string[];
 }
 

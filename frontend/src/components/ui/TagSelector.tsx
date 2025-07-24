@@ -47,7 +47,10 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   // Filter tags based on input
   useEffect(() => {
     if (!inputValue.trim()) {
-      setFilteredTags([]);
+      const availableTags = allTags.filter(tag => 
+        !selectedTags.some(selectedTag => selectedTag.id === tag.id)
+      );
+      setFilteredTags(availableTags);
       return;
     }
 
@@ -75,13 +78,11 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setInputValue(value);
-    setIsDropdownOpen(value.length > 0);
+    setIsDropdownOpen(true); // Always show dropdown when typing
   };
 
   const handleInputFocus = () => {
-    if (inputValue.trim()) {
-      setIsDropdownOpen(true);
-    }
+    setIsDropdownOpen(true); // Always show dropdown on focus
   };
 
   const handleTagSelect = (tag: Tag) => {

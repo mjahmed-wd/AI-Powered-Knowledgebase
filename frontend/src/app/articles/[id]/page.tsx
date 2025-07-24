@@ -1,20 +1,28 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Swal from 'sweetalert2';
 import { Button } from "@/components/ui";
 import { Article } from "@/types/api";
-import { getArticleById } from "@/services/articleService";
+import { getArticleById, deleteArticle, summarizeArticle } from "@/services/articleService";
+import { useAuth } from "@/hooks/useAuth";
 import { formatDate } from "@/utils/formatter";
+import { notify } from "@/utils/notify";
 
 export default function ArticleDetail() {
   const params = useParams();
+  const router = useRouter();
   const articleId = params.id as string;
+  const { user } = useAuth();
 
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [summarizing, setSummarizing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchArticle = async () => {
@@ -37,6 +45,64 @@ export default function ArticleDetail() {
       fetchArticle();
     }
   }, [articleId]);
+
+  const handleSummarize = async () => {
+    if (!article) return;
+    
+    try {
+      setSummarizing(true);
+      const result = await summarizeArticle(article.id);
+      setSummary(result.summary);
+    } catch (error) {
+      console.error('Failed to summarize article:', error);
+      notify.error('Failed to summarize article. Please try again.');
+    } finally {
+      setSummarizing(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!article) return;
+
+    const result = await Swal.fire({
+      title: 'Delete Article?',
+      text: 'Are you sure you want to delete this article? This action cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        setDeleting(true);
+        await deleteArticle(article.id);
+        
+        await Swal.fire({
+          title: 'Deleted!',
+          text: 'Your article has been deleted.',
+          icon: 'success',
+          confirmButtonColor: '#059669'
+        });
+        
+        router.push('/dashboard');
+      } catch (error) {
+        console.error('Failed to delete article:', error);
+        notify.error('Failed to delete article. Please try again.');
+        
+        Swal.fire({
+          title: 'Error!',
+          text: 'Failed to delete the article. Please try again.',
+          icon: 'error',
+          confirmButtonColor: '#dc2626'
+        });
+      } finally {
+        setDeleting(false);
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -105,9 +171,72 @@ export default function ArticleDetail() {
 
         <article className="bg-white rounded-lg shadow-sm border border-gray-200">
           <header className="px-6 py-8 border-b border-gray-200">
+            <div className="flex justify-between items-start mb-6">
+              <Button
+                onClick={handleSummarize}
+                disabled={summarizing}
+                className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
+              >
+                {summarizing ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Summarizing...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    Summarize Article
+                  </>
+                )}
+              </Button>
+
+              {user && article?.authorId === user.id && (
+                <Button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  variant="outline"
+                  className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                >
+                  {deleting ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Delete Article
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
               {article.title}
             </h1>
+
+            {summary && (
+              <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                  <h3 className="text-lg font-semibold text-purple-800">AI Summary</h3>
+                </div>
+                <p className="text-purple-700 leading-relaxed">{summary}</p>
+              </div>
+            )}
 
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center text-gray-600">
