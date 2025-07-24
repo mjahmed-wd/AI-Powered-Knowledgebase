@@ -2,32 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArticleList, Article } from '@/components/articles';
+import { ArticleList } from '@/components/articles';
 import { Button } from '@/components/ui';
-import { getMyArticles, deleteArticle, summarizeArticle } from '@/services/articleService';
-import { Article as APIArticle } from '@/types/api';
+import { getMyArticles } from '@/services/articleService';
+import { Article } from '@/types/api';
 import { useAuth } from '@/hooks/useAuth';
 import { notify } from '@/utils/notify';
-
-// Helper function to convert API Article to Component Article
-const convertAPIArticleToComponentArticle = (apiArticle: APIArticle): Article => ({
-  id: apiArticle.id,
-  title: apiArticle.title,
-  body: apiArticle.content,
-  author: {
-    id: apiArticle.authorId,
-    name: apiArticle.author?.name || 'Unknown Author'
-  },
-  tags: apiArticle.tags?.map(tag => tag.name) || [],
-  createdAt: apiArticle.createdAt,
-  updatedAt: apiArticle.updatedAt
-});
 
 export default function Dashboard() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const [isSummarizing, setIsSummarizing] = useState<string | null>(null);
   const { isAuthenticated } = useAuth();
 
   // Load user's articles on component mount
@@ -41,47 +25,12 @@ export default function Dashboard() {
     try {
       setIsLoading(true);
       const userArticles = await getMyArticles();
-      const convertedArticles = userArticles.map(convertAPIArticleToComponentArticle);
-      setArticles(convertedArticles);
+      setArticles(userArticles);
     } catch (error) {
       console.error('Failed to load articles:', error);
       notify.error('Failed to load your articles. Please try again.');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleDeleteArticle = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this article? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      setIsDeleting(id);
-      await deleteArticle(id);
-      setArticles(articles.filter(article => article.id !== id));
-      notify.success('Article deleted successfully');
-    } catch (error) {
-      console.error('Delete article error:', error);
-      notify.error('Failed to delete article. Please try again.');
-    } finally {
-      setIsDeleting(null);
-    }
-  };
-
-  const handleSummarizeArticle = async (id: string) => {
-    try {
-      setIsSummarizing(id);
-      const summary = await summarizeArticle(id);
-      
-      // Show summary in a modal or alert for now
-      alert(`Article Summary:\n\n${summary.summary}`);
-      notify.success('Article summarized successfully');
-    } catch (error) {
-      console.error('Summarize article error:', error);
-      notify.error('Failed to summarize article. Please try again.');
-    } finally {
-      setIsSummarizing(null);
     }
   };
 
@@ -144,12 +93,7 @@ export default function Dashboard() {
             ) : (
               <ArticleList
                 articles={articles}
-                showActions={true}
-                onDelete={handleDeleteArticle}
-                onSummarize={handleSummarizeArticle}
                 emptyMessage="You haven&apos;t published any articles yet. Start writing your first article!"
-                isDeleting={isDeleting}
-                isSummarizing={isSummarizing}
               />
             )}
           </div>

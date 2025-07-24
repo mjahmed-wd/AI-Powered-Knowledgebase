@@ -41,7 +41,7 @@ export interface AuthResponse {
 export interface Article {
   id: string;
   title: string;
-  content: string;
+  body: string;
   authorId: string;
   author?: User;
   tags?: Tag[];

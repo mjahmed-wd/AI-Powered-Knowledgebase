@@ -5,8 +5,9 @@ import {
   CreateArticleRequest,
   UpdateArticleRequest,
   ArticleSearchRequest,
-  ArticleListResponse,
   ArticleSummary,
+  PaginationParams,
+  PaginatedResponse,
 } from '@/types/api';
 
 export const createArticle = async (articleData: CreateArticleRequest): Promise<Article> => {
@@ -24,12 +25,33 @@ export const getMyArticles = async (): Promise<Article[]> => {
   return response.data!;
 };
 
-export const searchArticles = async (searchParams: ArticleSearchRequest): Promise<ArticleListResponse> => {
-  const response = await httpClient.post<ArticleListResponse>(
-    API_ENDPOINTS.ARTICLES.SEARCH,
+export const searchArticles = async (
+  searchParams: ArticleSearchRequest,
+  paginationParams?: PaginationParams
+) => {
+  const queryParams = new URLSearchParams();
+  if (paginationParams?.page) queryParams.set('page', paginationParams.page.toString());
+  if (paginationParams?.limit) queryParams.set('limit', paginationParams.limit.toString());
+  if (paginationParams?.sortBy) queryParams.set('sortBy', paginationParams.sortBy);
+  if (paginationParams?.sortOrder) queryParams.set('sortOrder', paginationParams.sortOrder);
+
+  const url = `${API_ENDPOINTS.ARTICLES.SEARCH}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+  
+  const response = await httpClient.post<Article[]>(
+    url,
     searchParams
   );
-  return response.data!;
+
+  const paginatedResponse: PaginatedResponse<Article> = {
+    data: response.data!,
+    meta: {
+      page: response.meta?.page || 1,
+      limit: response.meta?.limit || 10,
+      total: response.meta?.total || 0,
+      totalPages: Math.ceil((response.meta?.total || 0) / (response.meta?.limit || 1)),
+    }
+  };
+  return paginatedResponse;
 };
 
 export const getArticleById = async (articleId: string): Promise<Article> => {
@@ -61,28 +83,33 @@ export const summarizeArticle = async (articleId: string): Promise<ArticleSummar
   return response.data!;
 };
 
-export const simpleSearch = async (searchTerm: string, tagIds?: string[]): Promise<ArticleListResponse> => {
-  return searchArticles({
+export const simpleSearch = async (searchTerm: string, tagIds?: string[]): Promise<Article[]> => {
+  const result = await searchArticles({
     searchTerm,
     tagIds,
+  }, {
     page: 1,
     limit: 10,
   });
+  return result.data;
 };
 
-export const getArticlesByTag = async (tagId: string): Promise<ArticleListResponse> => {
-  return searchArticles({
+export const getArticlesByTag = async (tagId: string): Promise<Article[]> => {
+  const result = await searchArticles({
     tagIds: [tagId],
+  }, {
     page: 1,
     limit: 10,
   });
+  return result.data;
 };
 
-export const getLatestArticles = async (limit: number = 10): Promise<ArticleListResponse> => {
-  return searchArticles({
+export const getLatestArticles = async (limit: number = 10): Promise<Article[]> => {
+  const result = await searchArticles({}, {
     page: 1,
     limit,
     sortBy: 'createdAt',
     sortOrder: 'desc',
   });
+  return result.data;
 };

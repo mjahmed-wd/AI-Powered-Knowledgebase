@@ -1,24 +1,15 @@
 import React from 'react';
-import { ArticleCard, Article } from './ArticleCard';
+import { ArticleCard } from './ArticleCard';
+import { Article } from '@/types/api';
 
 interface ArticleListProps {
   articles: Article[];
-  showActions?: boolean;
-  onDelete?: (id: string) => void;
-  onSummarize?: (id: string) => void;
   emptyMessage?: string;
-  isDeleting?: string | null;
-  isSummarizing?: string | null;
 }
 
 export const ArticleList: React.FC<ArticleListProps> = ({
   articles,
-  showActions = false,
-  onDelete,
-  onSummarize,
   emptyMessage = "No articles found.",
-  isDeleting,
-  isSummarizing
 }) => {
   if (articles.length === 0) {
     return (
@@ -40,11 +31,6 @@ export const ArticleList: React.FC<ArticleListProps> = ({
         <ArticleCard
           key={article.id}
           article={article}
-          showActions={showActions}
-          onDelete={onDelete}
-          onSummarize={onSummarize}
-          isDeleting={isDeleting === article.id}
-          isSummarizing={isSummarizing === article.id}
         />
       ))}
     </div>

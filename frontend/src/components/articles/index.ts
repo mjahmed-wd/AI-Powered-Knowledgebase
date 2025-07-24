@@ -1,3 +1,4 @@
 export { ArticleCard } from './ArticleCard';
 export { ArticleList } from './ArticleList';
-export type { Article } from './ArticleCard';
+export { SearchForm } from './SearchForm';
+export type { Article } from '@/types/api';
